@@ -26,9 +26,9 @@ func NewBot(pref Settings) (*Bot, error) {
 	}
 
 	bot := &Bot{
-		Token:    pref.Token,
-		Updates:  make(chan Update, pref.Updates),
-		Poller:   pref.Poller,
+		Token:   pref.Token,
+		Updates: make(chan Update, pref.Updates),
+		Poller:  pref.Poller,
 
 		handlers: make(map[string]interface{}),
 		stop:     make(chan struct{}),
@@ -395,6 +395,11 @@ func (b *Bot) handle(end string, m *Message) bool {
 func (b *Bot) handleMedia(m *Message) bool {
 	if m.Photo != nil {
 		b.handle(OnPhoto, m)
+		return true
+	}
+
+	if m.Voice != nil {
+		b.handle(OnVoice, m)
 		return true
 	}
 
@@ -842,7 +847,7 @@ func (b *Bot) StopLiveLocation(message Editable, options ...interface{}) (*Messa
 
 	params := map[string]string{
 		"chat_id":    fmt.Sprintf("%d", chatID),
-		"message_id": fmt.Sprintf("%d", messageID),
+		"message_id": messageID,
 	}
 
 	sendOpts := extractOptions(options)
@@ -1017,7 +1022,7 @@ func (b *Bot) Unpin(chat *Chat) error {
 		"chat_id": chat.Recipient(),
 	}
 
-	respJSON, err := b.Raw("upinChatMessage", params)
+	respJSON, err := b.Raw("unpinChatMessage", params)
 	if err != nil {
 		return err
 	}
@@ -1056,7 +1061,7 @@ func (b *Bot) ChatByID(id string) (*Chat, error) {
 		return nil, errors.Errorf("api error: %s", resp.Description)
 	}
 
-	if resp.Result.Type == ChatChannel && resp.Result.Username != "" {
+	if resp.Result.Type == ChatChannel && resp.Result.Username == "" {
 		//Channel is Private
 		resp.Result.Type = ChatChannelPrivate
 	}
